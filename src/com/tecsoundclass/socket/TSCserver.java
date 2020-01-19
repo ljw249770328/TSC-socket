@@ -52,15 +52,22 @@ public class TSCserver extends WebSocketServer {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		if(ClientSet.containsKey(ConnectString)){
-			ClientSet.get(ConnectString).close();
-			ClientSet.remove(ConnectString);
-		}
-		ClientSet.put(ConnectString, conn);
-		System.out.println("["+conn.getRemoteSocketAddress().getAddress()
-				.getHostAddress()+"]"+ConnectString
-				+ "  连接至服务器");
-		System.out.println(ClientSet.toString());
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				if(ClientSet.containsKey(ConnectString)){
+					ClientSet.get(ConnectString).close();
+					ClientSet.remove(ConnectString);
+				}
+				ClientSet.put(ConnectString, conn);
+				System.out.println("["+conn.getRemoteSocketAddress().getAddress()
+						.getHostAddress()+"]"+ConnectString
+						+ "  连接至服务器");
+				System.out.println(ClientSet.toString());
+			}
+		}).start();
 	}
 	@Override
 	public void onClose(WebSocket conn, int code, String reason, boolean remote) {
@@ -74,8 +81,9 @@ public class TSCserver extends WebSocketServer {
 		System.out.println("["+conn.getRemoteSocketAddress().getAddress()
 				.getHostAddress()+"]"+key
 				+ "  与服务器断开连接,返回码:"+"["+code+"]");
-		ClientSet.values().remove(conn);
-//		System.out.println(ClientSet.toString());
+		ClientSet.remove(key);
+//		ClientSet.values().remove(conn);
+		System.out.println(ClientSet.toString());
 	}
 	@Override
 	public void onMessage(WebSocket conn, String message) {
@@ -92,6 +100,7 @@ public class TSCserver extends WebSocketServer {
 			e.printStackTrace();
 		}
 		if (param.containsKey("condition")) {
+			System.out.println(param.get("condition"));
 			switch (param.get("condition")) {
 			case "SignStart":
 				List<String> stuStrings =new ArrayList<String>();
@@ -176,7 +185,8 @@ public class TSCserver extends WebSocketServer {
 				resparam.put("CourseId", param.get("Course"));
 				System.out.println(param.get("Course")+"  QUES: "+param.get("Question"));
 				try {
-					send2Group("$"+param.get("Course"),URLEncoder.encode(gson.toJson(resparam),"UTF-8") );
+					send2Group("$"+param.get("Course"),URLEncoder.encode(gson.toJson(resparam),"UTF-8"));
+					send2Single(CLS2TeaMap.get(param.get("Course")), URLEncoder.encode(gson.toJson(resparam),"UTF-8"));
 				} catch (UnsupportedEncodingException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -213,8 +223,10 @@ public class TSCserver extends WebSocketServer {
 				break;
 			case "Caughted":
 				resparam.put("intent", "DIALOG_CANCLE");
+				resparam.put("CaughtUid",getKey(ClientSet, conn));
 				try {
 					send2GroupExc("$"+param.get("Cid"), URLEncoder.encode(gson.toJson(resparam),"UTF-8"),conn);
+					send2Single(CLS2TeaMap.get(param.get("Cid")), URLEncoder.encode(gson.toJson(resparam),"UTF-8"));
 				} catch (UnsupportedEncodingException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -223,12 +235,15 @@ public class TSCserver extends WebSocketServer {
 			case "NoReply":
 				String Cid =param.get("Cid");
 				List<String> clsLst=ClientGroup.get("$"+Cid);
-				System.out.println(clsLst.toString()+clsLst.size()+"||"+new Random().nextInt(clsLst.size()));
+				String idString=clsLst.get(new Random().nextInt(clsLst.size()));
+				System.out.println(clsLst.toString()+clsLst.size()+"||"+clsLst.get(new Random().nextInt(clsLst.size())));
+				resparam.put("CaughtUid", idString);
 				resparam.put("intent", "DRAW_ED");
 				resparam.put("question", param.get("question"));
 				resparam.put("CourseId", Cid);
 				try {
-					send2Single(clsLst.get(new Random().nextInt(clsLst.size())), URLEncoder.encode(gson.toJson(resparam),"UTF-8"));
+					send2Single(idString, URLEncoder.encode(gson.toJson(resparam),"UTF-8"));
+					conn.send(URLEncoder.encode(gson.toJson(resparam),"UTF-8"));
 				} catch (UnsupportedEncodingException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -237,6 +252,7 @@ public class TSCserver extends WebSocketServer {
 			case "ChatWith":
 				resparam.put("intent","COME_CHAT");
 				resparam.put("message", param.get("message"));
+				resparam.put("Sender", getKey(ClientSet, conn));
 				System.out.println(getKey(ClientSet, conn)+" 向 "+param.get("SendUser")+" 发送 "+param.get("message"));
 				try {
 					send2Single(param.get("SendUser"),URLEncoder.encode(gson.toJson(resparam),"UTF-8"));
@@ -266,7 +282,7 @@ public class TSCserver extends WebSocketServer {
 			conn.close();
 			ClientSet.values().remove(conn);
 		}
-		
+		System.out.println(ClientSet.toString());
 	}
 
 	//发送给该端口所有对象
