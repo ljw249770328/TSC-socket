@@ -53,11 +53,19 @@ public class TSCserver extends WebSocketServer {
 			e.printStackTrace();
 		}
 		new Thread(new Runnable() {
-			
 			@Override
 			public void run() {
 				// TODO Auto-generated method stub
 				if(ClientSet.containsKey(ConnectString)){
+					Map<String, String> resparam=new HashMap<String, String>();
+					resparam.put("intent", "FORCE_OFFLINE");
+					Gson gson=new Gson();
+					try {
+						ClientSet.get(ConnectString).send(URLEncoder.encode(gson.toJson(resparam),"UTF-8"));
+					} catch (NotYetConnectedException | UnsupportedEncodingException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 					ClientSet.get(ConnectString).close();
 					ClientSet.remove(ConnectString);
 				}
@@ -99,7 +107,7 @@ public class TSCserver extends WebSocketServer {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		if (param.containsKey("condition")) {
+		if (param!=null&&param.containsKey("condition")) {
 			System.out.println(param.get("condition"));
 			switch (param.get("condition")) {
 			case "SignStart":
