@@ -269,6 +269,56 @@ public class TSCserver extends WebSocketServer {
 					e.printStackTrace();
 				}
 				break;
+			case "InteractCancel":
+				resparam.put("intent", "DIALOG_CANCLE");
+				resparam.put("CaughtUid","");
+
+				try {
+					send2Group("$"+param.get("Cid"),URLEncoder.encode(gson.toJson(resparam),"UTF-8"));
+				} catch (UnsupportedEncodingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				break;
+			case "GetStuList":
+				resparam.put("intent", "ONLINE_LIST");
+				resparam.put("OnLineList", gson.toJson(ClientGroup.get("$"+param.get("Cid"))));
+				try {
+					conn.send(URLEncoder.encode(gson.toJson(resparam),"UTF-8"));
+				} catch (NotYetConnectedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (UnsupportedEncodingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				break;
+			case "TeaSelect":
+				String sid=param.get("Sid");
+				String cid=param.get("Cid");
+				String question=param.get("question"+"  "+CLS2TeaMap.get(cid));
+				
+				System.out.println(sid+"  "+cid+"  "+question);
+					//取消教师和学生的对话框	
+					try {
+						Map<String, String> resparam2=new HashMap<String, String>();
+						resparam2.put("intent", "DIALOG_CANCLE");
+						resparam2.put("CaughtUid",sid);
+						send2Single(CLS2TeaMap.get(cid), URLEncoder.encode(gson.toJson(resparam2),"UTF-8"));
+						send2Group("$"+cid,URLEncoder.encode(gson.toJson(resparam2),"UTF-8"));
+						resparam.put("CaughtUid", sid);
+						resparam.put("intent", "DRAW_ED");
+						resparam.put("question",question );
+						resparam.put("CourseId", cid);
+						//发送给教师选中的学生
+						send2Single(sid, URLEncoder.encode(gson.toJson(resparam),"UTF-8"));							
+					} catch (UnsupportedEncodingException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}				
+				break;
 			
 			default:
 				break;
